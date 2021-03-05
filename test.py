@@ -7,7 +7,7 @@ from om_comm import MOVE_FWD, MOVE_BKW, STATUS, INIT_CMD, STOP
 import numpy as np
 
 
-DEV_NAME = '/dev/ttyACM0'
+DEV_NAME = 'COM3'
 JST = timezone(timedelta(hours=+9), 'JST')
 
 def calc_parity(data):
@@ -68,48 +68,64 @@ class OMHacker:
         data += bytearray([0]*3)
         p_check = calc_parity(data[3:])
         data += bytearray([p_check] + [0]*20)
-        print(rep(data))
+        return self.wr(data)
+
+    def set_accl_time(self, sec, accl=True):
+        assert (0.5 <= sec) and (sec <= 15.0)
+        data = bytearray([0x03, 0x00, 0x01, 0x0c, 0x00, 0x81, 0x00, 0xc5 if accl else 0xc6, 0x01])
+        data += int(sec*10).to_bytes(1, 'little')
+        data += bytearray([0]*4)
+        p_check = calc_parity(data[3:])
+        data += bytearray([p_check] + [0]*20)
         return self.wr(data)
 
 def rep(b):
     return ' '.join([f'{i:02x}' for i in b])
 
+def status_print(pack):
+    print(f'{int.from_bytes(pack[7:11], "little", signed=True):5d}',
+          '##',
+          f'{int.from_bytes(pack[11:15], "little", signed=True):5d}',
+          '##',
+          ' '.join([f'{d:02d}' for d in pack[15:]]))
+    #print(' '.join([f'{d:02d}' for d in pack]))
+
 def main():
     omh = OMHacker()
     omh.connect()
-    with open('test.dat', 'wb') as f:
-        for i, cmd in enumerate(INIT_CMD):
-            d = omh.wr(cmd)
-            print(i, ':', d)
-            f.write(d)
+    for i, cmd in enumerate(INIT_CMD):
+        d = omh.wr(cmd)
+
+    d = omh.wr(STATUS)
+    #d = omh.set_op_number(1)
+    #d = omh.wr(STATUS)
+    omh.set_speed(1500)
+    omh.set_accl_time(15, False)
+    omh.set_accl_time(15, True)
+
+    print('MOVING FORWARD')
+    omh.wr(MOVE_FWD)
+    for i in range(200):
+        status_print(omh.wr(STATUS))
+        sleep(0.1)
+
+    print('STOPPED')
+    omh.wr(STOP)
+    for i in range(10):
+        status_print(omh.wr(STATUS))
+        sleep(0.1)
+
+    print('MOVING BACKWARD')
+    omh.wr(MOVE_BKW)
+    for i in range(200):
+        status_print(omh.wr(STATUS))
+        sleep(0.1)
         
-        d = omh.wr(STATUS)
-        d = omh.set_op_number(1)        
-        d = omh.wr(STATUS)
-        
-        omh.set_speed(300)
-        for j in range(0, 25, 4):
-            omh.wr(MOVE_FWD)
-            for i in range(10):
-                omh.wr(STATUS)
-                sleep(0.1)
-
-            omh.wr(STOP)                
-            for i in range(10):                
-                omh.wr(STATUS)
-                sleep(0.1)
-
-            omh.wr(MOVE_BKW)
-            for i in range(10):
-                omh.wr(STATUS)
-                sleep(0.1)
-
-            omh.wr(STOP)                
-            for i in range(10):                
-                omh.wr(STATUS)
-                sleep(0.1)
-
-            omh.set_speed(300 + 100*j)
+    print('STOPPED')
+    omh.wr(STOP)
+    for i in range(10):
+        status_print(omh.wr(STATUS))
+        sleep(0.1)
 
 
 if __name__ == '__main__':

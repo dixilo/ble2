@@ -12,6 +12,7 @@ PORT_DEFAULT = '/dev/ttyACM0'
 LOCK_RELEASE_SEC = 1.
 LOCK_RELEASE_TIMEOUT = 10
 ACQ_TIMEOUT = 100
+INIT_TIMEOUT = 100
 
 class BLE2Agent:
     '''OCS agent class for BLE2 motor driver
@@ -71,7 +72,13 @@ class BLE2Agent:
 
         if not self.initialized:
             self.agent.start('init_ble2')
-            self.agent.wait('init_ble2')
+            for _ in range(INIT_TIMEOUT):
+                if self.initialized:
+                    break
+                time.sleep(0.1)
+
+        if not self.initialized:
+            return False, 'Could not initialize..'
 
         with self.lock.acquire_timeout(timeout=0, job='acq') as acquired:
             if not acquired:

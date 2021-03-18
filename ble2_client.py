@@ -29,8 +29,7 @@ def main():
 
     ble2_client = MatchedClient('ble2', args=[])
 
-    ble2_client.init_ble2()
-
+    
     if args.operation == 'stop':
         status, message, _ = ble2_client.stop_rotation()
         return

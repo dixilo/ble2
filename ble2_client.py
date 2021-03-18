@@ -26,10 +26,13 @@ def main():
                         help='Forward rotation')
 
     args = parser.parse_args()
-    ble2_client = MatchedClient('ble2')
+
+    ble2_client = MatchedClient('ble2', args=[])
+
+    ble2_client.init_ble2()
 
     if args.operation == 'stop':
-        status, message, _ = ble2_client.stop()
+        status, message, _ = ble2_client.stop_rotation()
         return
 
     params = {k: v for k, v in args.__dict__.items() if v is not None}
@@ -45,9 +48,9 @@ def main():
             sys.exit(1)
 
         if args.backward:
-            ble2_client.start(forward=False)
+            ble2_client.start_rotation(forward=False)
         else: # Default is forward
-            ble2_client.start(forward=True)
+            ble2_client.start_rotation(forward=True)
 
 
 if __name__ == '__main__':

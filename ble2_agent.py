@@ -62,6 +62,9 @@ class BLE2Agent:
     def start_acq(self, session, params):
         '''Starts acquiring data.
         '''
+        if params is None:
+            params = {}
+
         f_sample = params.get('sampling_frequency', 2.5)
         sleep_time = 1/f_sample - 0.1
 
@@ -164,6 +167,9 @@ class BLE2Agent:
         if params is None:
             params = {}
 
+        if not self.take_data:
+            self.agent.start('acq')
+
         with self.lock.acquire_timeout(3, job='set_values') as acquired:
             if not acquired:
                 self.log.warn('Could not start set_values because '
@@ -203,7 +209,9 @@ def main():
 
     parser = site_config.add_arguments()
 
-    args = parser.parse_args('BLE2Agent')
+    args = parser.parse_args()
+    site_config.reparse_args(args, 'BLE2Agent')
+
     agent_inst, runner = ocs_agent.init_site_agent(args)
 
     ble2_agent = BLE2Agent(agent_inst)

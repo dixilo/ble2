@@ -11,6 +11,7 @@ from ble2 import BLE2
 PORT_DEFAULT = '/dev/ttyACM0'
 LOCK_RELEASE_SEC = 1.
 LOCK_RELEASE_TIMEOUT = 10
+ACQ_TIMEOUT = 100
 
 class BLE2Agent:
     '''OCS agent class for BLE2 motor driver
@@ -169,6 +170,13 @@ class BLE2Agent:
 
         if not self.take_data:
             self.agent.start('acq')
+            for _ in range(ACQ_TIMEOUT):
+                if self.take_data:
+                    break
+                time.sleep(0.1)
+
+        if not self.take_data:
+            return False, 'Could not start acq.'
 
         with self.lock.acquire_timeout(3, job='set_values') as acquired:
             if not acquired:
